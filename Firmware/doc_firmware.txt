@@ -1,7 +1,9 @@
-Firmware contenuti in questa cartella:
+﻿Firmware contenuti in questa cartella:
 Firmware_Slits_3.1_exported.txt: Il firmware originale descritto in questo documento
-Firmware_Slits_AI0_3.txt: Il firmware modificato per supportare l'output degli encoder in AnalogInput0. QUESTO È IL FIRMWARE DA USARE.
+Firmware_Slits_AI0_3.txt: Il firmware modificato per supportare l'output degli encoder in AnalogInput0.
 Firmware_Slits_AI0_3_NoCheck.txt: Firmware analogo al Firmware_Slits_AI0_3.txt ma non esegue nessun test su AnalogInput0. Questo firmware è da usare senza encoder!
+Firmware_Slits_4.0: in aggiunta alla versione AI0_3 aggiungiamo controlli di sicurezza su posizione da encoder e su termine corsa impostato 
+
 
 
 Il firmware da utilizzare con gli encoder è il Firmware_Slits_AI0_3.txt .
@@ -97,7 +99,21 @@ Chiaramente un driver così non ha senso di esistere in una situazione reale: se
 Il firmware così modificato è il Firmware_Slits_AI0_3_NoCheck.txt.
 
 
+- 01/02/2017 - Firmware revisione 4.0
 
+- aggiunte variabili utente per valori minimo e massimo per l'encoder (Encoder_Min, Encoder_Max)
+- aggiunto variabile utente per il valore massimo di TargetPos (Max_TargetPos), il valore minimo rimane zero una volta eseguito l'homing
+- aggiunto il controllo sui valori minimo (zero) e massimo di (Max_TargetPos) per l'impostazione di TargetPos con la variabile Check_SetPos nella funzione InitMov
+- aggiunto il controllo costante su Encoder_Min e Encoder_Max con la variabile utente check_Enc
+
+- 08/02/2017 - Firmware revisione 4.1
+
+- inserito variabile utente per la corrente di fase (PhaseCurr_User), per inizializzare PhaseCurrent con il valore salvato nella flash dopo la calibrazione in coppia
+- aggiornato stato di scrittura delle variabili utente sulla flash. se la scrittura non va a buon fine status_state = 4. 
+se il LoadVar che segue alla scrittura non va a buon fine genera uno status_state = 6. da qui l'utente puo' richiedere un reset del programma impostando status_state = 7
+- aggiunto un controllo all'avvio del programma utente della corretta lettura da flash della variabili utente. In caso negativo il programma rimane bloccato all'inizio e 
+l'utente puo' solo tentare un reset impostando status_state = 7. In caso di primo avvio del driver l'utente puo' saltare il blocco impostando status_state = 0.
+- aggiunto assegnazione di Encoder_Min (da chiusura manuale e status_state = 8) e Encoder_Max (da TargetPos = MaxPos e status_state = 9) da installazione manuale.
 
 
 
