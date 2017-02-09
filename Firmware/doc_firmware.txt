@@ -134,7 +134,10 @@ Abbiamo hardcodato i valori degli stati, in questo modo non possono essere camab
 definitivo, con un valore che sara' determinato dai test.
 
 
-
+- 09/02/2017 - Firmware revisione 4.3
+- sistemata la logica degli stati request_state e home_done, eliminata la variabile req_log_state
+- inserito controllo su Fault in CheckMoveDone
+- inserito controllo su Fault nel maiLoop
 
 
 
