@@ -114,6 +114,29 @@ se il LoadVar che segue alla scrittura non va a buon fine genera uno status_stat
 - aggiunto un controllo all'avvio del programma utente della corretta lettura da flash della variabili utente. In caso negativo il programma rimane bloccato all'inizio e 
 l'utente puo' solo tentare un reset impostando status_state = 7. In caso di primo avvio del driver l'utente puo' saltare il blocco impostando status_state = 0.
 - aggiunto assegnazione di Encoder_Min (da chiusura manuale e status_state = 8) e Encoder_Max (da TargetPos = MaxPos e status_state = 9) da installazione manuale.
+- aggiunto controllo su prevAnalog0 e Analog0, con intervallo di precisione Delta_AnalogPos e Delta_AnalogNeg. Per cambiare l'intervallo cambiare valore alla variabile 
+Delta_AnalogPos, quindi lanciare SetConfig, che automaticamente imposta Delta_AnalogNeg = - Delta_AnalogPos.
+Con l'introduzione dei Delta_Analog, abbiamo esaurito le memoria per le variabili utente.
+
+- 09/02/2017 - Firmware revisione 4.2
+- per recuperare spazio in memoria per le variabili utente e per rendere piu' sicuro il firmware, eliminiamo le variabili che identificano numericamente lo stato da eseguire:
+VARIABLE = "state_setConfig", 1    ;40978(0xA012)
+VARIABLE = "state_homing", 1    ;40979(0xA013)
+VARIABLE = "state_resetPos", 1    ;40980(0xA014)
+VARIABLE = "state_moveRel", 1    ;40981(0xA015)
+  state_setConfig = 2
+  state_homing = 4
+  state_resetPos = 6
+  state_moveRel = 17
+Abbiamo hardcodato i valori degli stati, in questo modo non possono essere camabiati dall'utente.
+
+- aggiunta la variabile Delay_CheckRot inizializzata a 50 ms di default, per debug delle movimentazioni. Da considerare la possibilita' di hardcodarlo per il firmware
+definitivo, con un valore che sara' determinato dai test.
+
+
+
+
+
 
 
 
