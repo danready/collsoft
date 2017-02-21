@@ -23,8 +23,8 @@
 #include "DriverFunction.h"
 #include "CommandExecutor.h"
 #include "Linear.h"
-#include "dirent.h"
 
+#include <dirent.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -158,6 +158,9 @@ int main(int argc, char *argv[])
 	}
 
 	//Saving in the LogFile the beginning of the program recording also the currente date.
+	//Warning: all the following functions like LogFileWriteString will write
+	//on the log file specified by LogFileSet. If you want to write on another file you have
+	//to use again the function LogFileSet.
 	logfile->LogFileSet(main_application_setup->application_setup_general_log_path);
 	
 	logfile->LogFileWriteString("################################################\n");
@@ -195,6 +198,9 @@ int main(int argc, char *argv[])
 				output_module->OutputModuleSockidOff();
 				
 				//Recording the command in the LogFile
+				//Warning: all the following functions like LogFileWriteString will write
+				//on the log file specified by LogFileSet. If you want to write on another file you have
+				//to use again the function LogFileSet.				
 				logfile->LogFileSet(main_application_setup->application_setup_general_log_path);
 				string buffer_tmp = buffer;
 				logfile->LogFileWriteString(GetTime() + ": Command '" + buffer_tmp + "' sent via stdin\n\n");
@@ -212,7 +218,10 @@ int main(int argc, char *argv[])
 				//Enabling the Output to the TCP/IP recording the user_sockid of the user who has sent the command.
 				output_module->OutputModuleSockidOn(command_received_by_user.user_sockid);
 				
-				//Recording the command in the LogFile				
+				//Recording the command in the LogFile
+				//Warning: all the following functions like LogFileWriteString will write
+				//on the log file specified by LogFileSet. If you want to write on another file you have
+				//to use again the function LogFileSet.							
 				logfile->LogFileSet(main_application_setup->application_setup_general_log_path);
 				string buffer_tmp = command_received_by_user.command_sent_by_user;
 				logfile->LogFileWriteString(GetTime() + ": Command '" + buffer_tmp + "' sent via tcp/ip by user " + to_string(command_received_by_user.user_sockid) + "\n\n");				
@@ -240,7 +249,10 @@ int main(int argc, char *argv[])
 				//Disbling the output to the TCP/IP
 				output_module->OutputModuleSockidOff();
 				
-				//Recording the command in the LogFile				
+				//Recording the command in the LogFile
+				//Warning: all the following functions like LogFileWriteString will write
+				//on the log file specified by LogFileSet. If you want to write on another file you have
+				//to use again the function LogFileSet.						
 				logfile->LogFileSet(main_application_setup->application_setup_general_log_path);
 				string buffer_tmp = buffer;
 				logfile->LogFileWriteString(GetTime() + ": Command '" + buffer_tmp + "' sent via stdin in date\n\n");
@@ -267,7 +279,10 @@ int main(int argc, char *argv[])
 				//Enabling the Output to the TCP/IP recording the user_sockid of the user who has sent the command.
 				output_module->OutputModuleSockidOn(command_received_by_user.user_sockid);
 
-				//Recording the command in the LogFile				
+				//Recording the command in the LogFile
+				//Warning: all the following functions like LogFileWriteString will write
+				//on the log file specified by LogFileSet. If you want to write on another file you have
+				//to use again the function LogFileSet.						
 				logfile->LogFileSet(main_application_setup->application_setup_general_log_path);
 				string buffer_tmp = command_received_by_user.command_sent_by_user;
 				logfile->LogFileWriteString(GetTime() + ": Command '" + buffer_tmp + "' sent via tcp/ip by user " + to_string(command_received_by_user.user_sockid) + "\n\n");				
@@ -284,8 +299,7 @@ int main(int argc, char *argv[])
 			//Exit: this command can be sent only via stdin.
 			if(reg_matches (buffer, "^[Ee][Xx][iI][tT][ \t]*$")) 			
 			{
-				string tmp_string = __func__;
-				output_module->Output("###############\n" + tmp_string + ": Exiting to CollSoft program....\n");
+				output_module->Output("Exiting to CollSoft program....\n");
 				
 				if (main_application_setup->input_mode != ONLYTCP) {
 					fflush(stdout);
@@ -294,20 +308,47 @@ int main(int argc, char *argv[])
 				return 0;
 			}
 
+			//connect absoluteprogrammerpath
+			//This command tries to connect the server with the programmer indicated by "absoluteprogrammerpath"
+			else if(reg_matches (buffer, "^[Cc][Oo][Nn][Nn][Ee][Cc][Tt][ \t][A-z0-9/\\]{1,100}[ \t]*$") || reg_matches (command_received_by_user.command_sent_by_user, "^[Cc][Oo][Nn][Nn][Ee][Cc][Tt][ \t][A-z0-9/\\]{1,100}[ \t]*$") )
+			{
+				//Pointer to store the absoluteprogrammerpath
+				char* tmp_pointer;
+				
+				//if the command was sent via TCP/IP
+				if (reg_matches (command_received_by_user.command_sent_by_user, "^[Cc][Oo][Nn][Nn][Ee][Cc][Tt][ \t][A-z0-9/\\]{1,100}[ \t]*$")) 
+				{
+					tmp_pointer = FindPointer(command_received_by_user.command_sent_by_user);
+				}
+				//if the command was sent via stdin
+				else 
+				{
+					tmp_pointer = FindPointer(buffer);
+				}
+				
+				//STATE_CONNECT will record the connection status.
+				ctx = Connect(ctx, &STATE_CONNECT, tmp_pointer);
+				
+			}
+
+			//help
+			//This command prints the list of the commands that the server can execute. 
+			else if(reg_matches (buffer, "^[Hh][Ee][Ll][Pp][ \t]*$") || reg_matches (command_received_by_user.command_sent_by_user, "^[Hh][Ee][Ll][Pp][ \t]*$"))
+			{
+				//Printing the commands list.
+				HelpCommand();
+			}
+
 			//read_serial_log
 			//This command read the file SerialDrvLog.txt
 			else if(reg_matches (buffer, "^[Rr][Ee][Aa][Dd]_[Ss][Ee][Rr][Ii][Aa][Ll]_[Ll][Oo][Gg][ \t]*$") ||
 			reg_matches (command_received_by_user.command_sent_by_user, "^[Rr][Ee][Aa][Dd]_[Ss][Ee][Rr][Ii][Aa][Ll]_[Ll][Oo][Gg][ \t]*$")) 
 			{
-				//~ if (STATE_CONNECT == 1)
-				//~ {
+					//Warning: all the following functions like LogFileWriteString will write
+					//on the log file specified by LogFileSet. If you want to write on another file you have
+					//to use again the function LogFileSet.				
 					logfile->LogFileSet(main_application_setup->application_setup_serial_drv_log_file_path);
 					logfile->LogFileRead();
-				//~ }
-				//~ else
-				//~ {
-					//~ output_module->Output("Reading LogFile... Error: driver not connected. Digit 'connect programmerpath'.\n");
-				//~ }
 			}
 				
 			//read_par_log
@@ -315,15 +356,11 @@ int main(int argc, char *argv[])
 			else if(reg_matches (buffer, "^[Rr][Ee][Aa][Dd]_[Pp][Aa][Rr]_[Ll][Oo][Gg][ \t]*$") ||
 			reg_matches (command_received_by_user.command_sent_by_user, "^[Rr][Ee][Aa][Dd]_[Pp][Aa][Rr]_[Ll][Oo][Gg][ \t]*$")) 
 			{
-				//~ if (STATE_CONNECT == 1)
-				//~ {
+					//Warning: all the following functions like LogFileWriteString will write
+					//on the log file specified by LogFileSet. If you want to write on another file you have
+					//to use again the function LogFileSet.				
 					logfile->LogFileSet(main_application_setup->application_setup_file_par_log_path);
 					logfile->LogFileRead();
-				//~ }
-				//~ else
-				//~ {
-					//~ output_module->Output("Reading LogFile... Error: driver not connected. Digit 'connect programmerpath'.\n");
-				//~ }
 			}
 
 			//read_log
@@ -331,15 +368,11 @@ int main(int argc, char *argv[])
 			else if(reg_matches (buffer, "^[Rr][Ee][Aa][Dd]_[Ll][Oo][Gg][ \t]*$") ||
 			reg_matches (command_received_by_user.command_sent_by_user, "^[Rr][Ee][Aa][Dd]_[Ll][Oo][Gg][ \t]*$")) 
 			{
-				//~ if (STATE_CONNECT == 1)
-				//~ {
+					//Warning: all the following functions like LogFileWriteString will write
+					//on the log file specified by LogFileSet. If you want to write on another file you have
+					//to use again the function LogFileSet.				
 					logfile->LogFileSet(main_application_setup->application_setup_general_log_path);
 					logfile->LogFileRead();
-				//~ }
-				//~ else
-				//~ {
-					//~ output_module->Output("Reading LogFile... Error: driver not connected. Digit 'connect programmerpath'.\n");
-				//~ }
 			}
 			
 			//read_encoder_log
@@ -347,15 +380,11 @@ int main(int argc, char *argv[])
 			else if(reg_matches (buffer, "^[Rr][Ee][Aa][Dd]_[Ee][Nn][Cc][Oo][Dd][Ee][Rr]_[Ll][Oo][Gg][ \t]*$") ||
 			reg_matches (command_received_by_user.command_sent_by_user, "^[Rr][Ee][Aa][Dd]_[Ee][Nn][Cc][Oo][Dd][Ee][Rr]_[Ll][Oo][Gg][ \t]*$")) 
 			{
-				//~ if (STATE_CONNECT == 1)
-				//~ {
+					//Warning: all the following functions like LogFileWriteString will write
+					//on the log file specified by LogFileSet. If you want to write on another file you have
+					//to use again the function LogFileSet.				
 					logfile->LogFileSet(main_application_setup->application_setup_encoder_log_path);
 					logfile->LogFileRead();
-				//~ }
-				//~ else
-				//~ {
-					//~ output_module->Output("Reading LogFile... Error: driver not connected. Digit 'connect programmerpath'.\n");
-				//~ }
 			}			
 
 			//check_drv_assoc
@@ -365,8 +394,12 @@ int main(int argc, char *argv[])
 			{
 				if (STATE_CONNECT == 1)
 				{
+					//The following function CheckDrvAssoc needs to communicate with the client. So, it is created a reference to the
+					//CommunicationObject mioTCP called mioTCP_reference.
 					CommunicationObject& mioTCP_reference = mioTCP;
 
+					//Launching the routine to check the association between the drivers serial number found in the SerialDrvLog.txt
+					//file and the real situation.
 					CheckDrvAssoc(mioTCP_reference, mioinput, ctx);
 				}
 				else
@@ -382,8 +415,12 @@ int main(int argc, char *argv[])
 			{
 				if (STATE_CONNECT == 1)
 				{
+					//The following function CheckParAssoc needs to communicate with the client. So, it is created a reference to the
+					//CommunicationObject mioTCP called mioTCP_reference.				
 					CommunicationObject& mioTCP_reference = mioTCP;
 
+					//Launching the routine to check the association between the drivers parameters found in the FileParLog.txt file 
+					//and the real situation.
 					CheckParAssoc(mioTCP_reference, mioinput, ctx);
 				}
 				else
@@ -399,8 +436,12 @@ int main(int argc, char *argv[])
 			{
 				if (STATE_CONNECT == 1)
 				{
+					//The following function CheckEncodeAssoc needs to communicate with the client. So, it is created a reference to the
+					//CommunicationObject mioTCP called mioTCP_reference.					
 					CommunicationObject& mioTCP_reference = mioTCP;
 
+					//Launching the routine to check the association between the encoder values contained in the EncoderLog.txt file
+					//and the real situation.
 					CheckEncodeAssoc(mioTCP_reference, mioinput, ctx);
 				}
 				else
@@ -408,55 +449,32 @@ int main(int argc, char *argv[])
 					output_module->Output("Check Par Assoc: Error: driver not connected. Digit 'connect programmerpath'.\n");				
 				}
 			}
-
-			//connect absoluteprogrammerpath
-			//This command tries to connect the server with the programmer indicated by "absoluteprogrammerpath"
-			else if(reg_matches (buffer, "^[Cc][Oo][Nn][Nn][Ee][Cc][Tt][ \t][A-z0-9/\\]{1,100}[ \t]*$") || reg_matches (command_received_by_user.command_sent_by_user, "^[Cc][Oo][Nn][Nn][Ee][Cc][Tt][ \t][A-z0-9/\\]{1,100}[ \t]*$") )
-			{
-				
-				char* tmp_pointer;
-				
-				if (reg_matches (command_received_by_user.command_sent_by_user, "^[Cc][Oo][Nn][Nn][Ee][Cc][Tt][ \t][A-z0-9/\\]{1,100}[ \t]*$")) {
-					tmp_pointer = FindPointer(command_received_by_user.command_sent_by_user);
-				} else {
-					tmp_pointer = FindPointer(buffer);
-				}
-				
-				//N.B. In tmp_pointer is stored the programmerpath (in fact, the command is connect programmerpath)
-				ctx = Connect(ctx, &STATE_CONNECT, tmp_pointer);
-				
-			}
-
-			//help
-			//This command prints the list of the commands that the server can execute. 
-			else if(reg_matches (buffer, "^[Hh][Ee][Ll][Pp][ \t]*$") || reg_matches (command_received_by_user.command_sent_by_user, "^[Hh][Ee][Ll][Pp][ \t]*$"))
-			{
-				HelpCommand();
-			}
 			
 			//get_par drvnum
 			//Prints the parameters of the driver indicated by drvnum. Parameters are: max_vel, velhome, acceleration, deceleration, phase_current, analog_output0.
 			else if(reg_matches (buffer, "^[Gg][Ee][Tt]_[Pp][Aa][Rr][ \t][0-9]{1,2}[ \t]*$") ||
 					reg_matches (command_received_by_user.command_sent_by_user, "^[Gg][Ee][Tt]_[Pp][Aa][Rr][ \t][0-9]{1,2}[ \t]*$"))
 			{
-				int get_par_value = 0;
+				int get_par_drv = 0;
 				
+				//if the command was sent via stdin
 				if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Pp][Aa][Rr][ \t][0-9]{1,2}[ \t]*$"))
 				{
-					get_par_value = FindIntegerValue(buffer);
+					get_par_drv = FindIntegerValue(buffer);
 				}
+				//if the command was sent via TCP/IP
 				else
 				{
-					get_par_value = FindIntegerValue(command_received_by_user.command_sent_by_user);
+					get_par_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
 				}
 					
 				if (STATE_CONNECT == 1)
 				{
-					GetPar(ctx, get_par_value);			
+					GetPar(ctx, get_par_drv);			
 				}
 				else
 				{
-					SendFailedGetPar(get_par_value);
+					SendFailedGetPar(get_par_drv);
 				}
 				
 			}	
@@ -466,25 +484,31 @@ int main(int argc, char *argv[])
 			else if(reg_matches (buffer, "^[Cc][Hh][Ee][Cc][Kk]_[Pp][Oo][Ss][Ii][Tt][Ii][Oo][Nn][ \t][0-9]{1,2}[ \t]*$") ||
 					reg_matches (command_received_by_user.command_sent_by_user, "^[Cc][Hh][Ee][Cc][Kk]_[Pp][Oo][Ss][Ii][Tt][Ii][Oo][Nn][ \t][0-9]{1,2}[ \t]*$"))
 			{
-				int get_pos_value = 0;
+				int get_pos_drv = 0;
 				
+				//if the command was sent via stdin
 				if (reg_matches (buffer, "^[Cc][Hh][Ee][Cc][Kk]_[Pp][Oo][Ss][Ii][Tt][Ii][Oo][Nn][ \t][0-9]{1,2}[ \t]*$"))
 				{
-					get_pos_value = FindIntegerValue(buffer);
+					get_pos_drv = FindIntegerValue(buffer);
 				}
+				//if the command was sent via TCP/IP
 				else
 				{
-					get_pos_value = FindIntegerValue(command_received_by_user.command_sent_by_user);
+					get_pos_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
 				}
 					
 				if (STATE_CONNECT == 1)
 				{
-					CheckPositionEncoderSingleWarning(ctx, get_pos_value);			
+					//If the user has not loaded the encoding values from EncoderLog.txt.
+					if (loading_encoder_from_file_okay == 0)
+						output_module->Output("Check position warning! You have to press the button Load Encoder From File in General tab or you have to digit load_encoder_from_file command in order to accomplished the check position procedure in a consistent way!\n");
+
+					CheckPositionEncoderSingle(ctx, get_pos_drv);			
 				}
 				else
 				{
 					output_module->Output("Exp: error, driver not connected. Digit 'connect programmerpath'.\n");
-					SendFailedGetStatusPos(get_pos_value);
+					SendFailedGetStatusPos(get_pos_drv);
 				}
 				
 			}				
@@ -496,28 +520,30 @@ int main(int argc, char *argv[])
 					 reg_matches (command_received_by_user.command_sent_by_user, "^[Ss][Ee][Tt]_[Pp][Aa][Rr]([ \t]+[0-9]{1,5})([ \t]+[0-9]{1,5})([ \t]+-{0,1}[0-9]{1,5})([ \t]+[0-9]{1,5})([ \t]+[0-9]{1,5})([ \t]+[0-9]{1,5})([ \t]+[0-9]{1,5})[ \t]*$"))
 			{
 
-				char* buffer_set_par_value;
+				char* set_par_contents;
 				
-				int set_par_value = 0;
+				int set_par_drv = 0;
 				
+				//if the command was sent via stdin
 				if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Pp][Aa][Rr]([ \t]+[0-9]{1,5})([ \t]+[0-9]{1,5})([ \t]+-{0,1}[0-9]{1,5})([ \t]+[0-9]{1,5})([ \t]+[0-9]{1,5})([ \t]+[0-9]{1,5})([ \t]+[0-9]{1,5})[ \t]*$"))
 				{
-					set_par_value = FindIntegerValue(buffer);
-					buffer_set_par_value = buffer;
+					set_par_drv = FindIntegerValue(buffer);
+					set_par_contents = buffer;
 				}
+				//if the command was sent via TCP/IP
 				else
 				{
-					set_par_value = FindIntegerValue(command_received_by_user.command_sent_by_user);
-					buffer_set_par_value = command_received_by_user.command_sent_by_user;
+					set_par_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+					set_par_contents = command_received_by_user.command_sent_by_user;
 				}				
 			  
 				if (STATE_CONNECT == 1)
 				{
-					SetPar(ctx, set_par_value, buffer_set_par_value);
+					SetPar(ctx, set_par_drv, set_par_contents);
 				}
 				else
 				{
-					SendFailedGetPar(set_par_value);
+					SendFailedGetPar(set_par_drv);
 				}
 			}				
 			
@@ -526,29 +552,28 @@ int main(int argc, char *argv[])
 			else if (reg_matches (buffer,"^[Hh][Oo][Mm][Ii][Nn][Gg][ \t]+[0-9]{1,2}[ \t]*$") || 
 					 reg_matches (command_received_by_user.command_sent_by_user, "^[Hh][Oo][Mm][Ii][Nn][Gg][ \t]+[0-9]{1,2}[ \t]*$"))
 			{
-				char* buffer_homing_value;
 				
-				int homing_value = 0;
+				int homing_drv = 0;
 				
+				//if the command was sent via stdin
 				if (reg_matches (buffer,"^[Hh][Oo][Mm][Ii][Nn][Gg][ \t]+[0-9]{1,2}[ \t]*$"))
 				{
-					homing_value = FindIntegerValue(buffer);
-					buffer_homing_value = buffer;
+					homing_drv = FindIntegerValue(buffer);
 				}
+				//if the command was sent via TCP/IP
 				else
 				{
-					homing_value = FindIntegerValue(command_received_by_user.command_sent_by_user);
-					buffer_homing_value = command_received_by_user.command_sent_by_user;
+					homing_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
 				}				
 			  
 				if (STATE_CONNECT == 1)
 				{
-					Homing(ctx, homing_value);
-					GetMovePar(ctx, homing_value);
+					Homing(ctx, homing_drv);
+					GetMovePar(ctx, homing_drv);
 				}
 				else
 				{
-					output_module->Output("homing: " + to_string(homing_value) + " Programmer not connected, digit 'connect programmerpath'.\n " + to_string(-1));
+					output_module->Output("homing: " + to_string(homing_drv) + " Programmer not connected, digit 'connect programmerpath'.\n " + to_string(-1));
 				}
 			}
 			
@@ -557,28 +582,27 @@ int main(int argc, char *argv[])
 			else if (reg_matches (buffer,"^[Gg][Ee][Tt]_[Mm][Oo][Vv]_[Pp][Aa][Rr][ \t]+[0-9]{1,2}[ \t]*$") || 
 					 reg_matches (command_received_by_user.command_sent_by_user, "^[Gg][Ee][Tt]_[Mm][Oo][Vv]_[Pp][Aa][Rr][ \t]+[0-9]{1,2}[ \t]*$"))
 			{
-				char* buffer_mov_par_value;
 				
-				int mov_par_value = 0;
+				int get_mov_par_drv = 0;
 				
+				//if the command was sent via stdin
 				if (reg_matches (buffer,"^[Gg][Ee][Tt]_[Mm][Oo][Vv]_[Pp][Aa][Rr][ \t]+[0-9]{1,2}[ \t]*$"))
 				{
-					mov_par_value = FindIntegerValue(buffer);
-					buffer_mov_par_value = buffer;
+					get_mov_par_drv = FindIntegerValue(buffer);
 				}
+				//if the command was sent via TCP/IP
 				else
 				{
-					mov_par_value = FindIntegerValue(command_received_by_user.command_sent_by_user);
-					buffer_mov_par_value = command_received_by_user.command_sent_by_user;
+					get_mov_par_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
 				}				
 			  
 				if (STATE_CONNECT == 1)
 				{
-					GetMovePar(ctx, mov_par_value);
+					GetMovePar(ctx, get_mov_par_drv);
 				}
 				else
 				{
-					output_module->Output("get_move_par: " + to_string(mov_par_value) + " Programmer not connected, digit 'connect programmerpath'.\n " + to_string(-1));
+					output_module->Output("get_move_par: " + to_string(get_mov_par_drv) + " Programmer not connected, digit 'connect programmerpath'.\n " + to_string(-1));
 				}
 			}	
 			
@@ -593,28 +617,30 @@ int main(int argc, char *argv[])
 				
 				//char* buffer_encoder_value;
 				
-				int encoder_value = 0;
+				int encoder_drv = 0;
 				
+				//if the command was sent via stdin
 				if (reg_matches (buffer,"^[Ee][Nn][Cc][Oo][Dd][Ee][ \t]+[0-9]{1,2}[ \t]*$"))
 				{
-					encoder_value = FindIntegerValue(buffer);
+					encoder_drv = FindIntegerValue(buffer);
 				}
+				//if the command was sent via TCP/IP
 				else
 				{
-					encoder_value = FindIntegerValue(command_received_by_user.command_sent_by_user);
+					encoder_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
 				}				
 			  
 				if (STATE_CONNECT == 1)
 				{
 					if (ENCODINGHOME == 1)
 					{
-						Homing(ctx, encoder_value);
+						Homing(ctx, encoder_drv);
 					}
-					Encode(ctx, encoder_value, drv_enc_parameter);
+					Encode(ctx, encoder_drv, drv_enc_parameter);
 				}
 				else
 				{
-					output_module->Output("get_encoder_par: " + to_string(encoder_value) + " Programmer not connected, digit 'connect programmerpath'.\n " + to_string(-1));
+					output_module->Output("get_encoder_par: " + to_string(encoder_drv) + " Programmer not connected, digit 'connect programmerpath'.\n " + to_string(-1));
 				}				
 			}		
 			
@@ -623,29 +649,31 @@ int main(int argc, char *argv[])
 			else if (reg_matches (buffer,"^[Mm][Oo][Vv][Ee]_[Tt][Oo][ \t]+[0-9]{1,2}([ \t]+-{0,1}[0-9]{1,10})[ \t]*$") || 
 					 reg_matches (command_received_by_user.command_sent_by_user, "^[Mm][Oo][Vv][Ee]_[Tt][Oo][ \t]+[0-9]{1,2}([ \t]+-{0,1}[0-9]{1,10})[ \t]*$"))
 			{
-				char* buffer_mov_par_value;
+				int move_to_value;
 				
-				int mov_par_value = 0;
+				int move_to_drv = 0;
 				
+				//if the command was sent via stdin
 				if (reg_matches (buffer,"^[Mm][Oo][Vv][Ee]_[Tt][Oo][ \t]+[0-9]{1,2}([ \t]+-{0,1}[0-9]{1,10})[ \t]*$"))
 				{
-					mov_par_value = FindIntegerValue(buffer);
-					buffer_mov_par_value = buffer;
+					move_to_drv = FindIntegerValue(buffer);
+					move_to_value = FindIntegerValue(FindPointer(buffer));
 				}
+				//if the command was sent via TCP/IP
 				else
 				{
-					mov_par_value = FindIntegerValue(command_received_by_user.command_sent_by_user);
-					buffer_mov_par_value = command_received_by_user.command_sent_by_user;
+					move_to_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+					move_to_value = FindIntegerValue(FindPointer(command_received_by_user.command_sent_by_user));
 				}				
 			  
 				if (STATE_CONNECT == 1)
 				{
-					MoveTo(ctx, mov_par_value, buffer_mov_par_value);
-					GetMovePar(ctx, mov_par_value);
+					MoveTo(ctx, move_to_drv, move_to_value);
+					GetMovePar(ctx, move_to_drv);
 				}
 				else
 				{
-					output_module->Output("get_move_par: " + to_string(mov_par_value) + " Programmer not connected, digit 'connect programmerpath'.\n " + to_string(-1));
+					output_module->Output("get_move_par: " + to_string(move_to_drv) + " Programmer not connected, digit 'connect programmerpath'.\n " + to_string(-1));
 				}
 			}				
 			
@@ -654,24 +682,24 @@ int main(int argc, char *argv[])
 			else if(reg_matches (buffer, "^[Gg][Ee][Tt]_[Aa][Ll][Ll]_[Pp][Aa][Rr][Aa][Mm][Ee][Tt][Ee][Rr][ \t]*$") ||
 					reg_matches (command_received_by_user.command_sent_by_user, "^[Gg][Ee][Tt]_[Aa][Ll][Ll]_[Pp][Aa][Rr][Aa][Mm][Ee][Tt][Ee][Rr][ \t]*$"))
 			{
-				int get_par_value = 0;
+				int get_par_drv = 0;
 					
 				if (STATE_CONNECT == 1)
 				{
-					for ( get_par_value = 1; get_par_value <= MAXIMUM_DRIVER ; get_par_value++)
+					for ( get_par_drv = 1; get_par_drv <= MAXIMUM_DRIVER ; get_par_drv++)
 					{
-						GetMovePar(ctx, get_par_value);
-						GetPar(ctx, get_par_value);
-						CheckPositionEncoderSingle(ctx, get_par_value);
+						GetMovePar(ctx, get_par_drv);
+						GetPar(ctx, get_par_drv);
+						CheckPositionEncoderSingle(ctx, get_par_drv);
 					}
 				}
 				else
 				{
-					for ( get_par_value = 1; get_par_value <= MAXIMUM_DRIVER ; get_par_value++)
+					for ( get_par_drv = 1; get_par_drv <= MAXIMUM_DRIVER ; get_par_drv++)
 					{	
-						SendFailedGetPar(get_par_value);
-						SendFailedGetMovPar(get_par_value);
-						SendFailedGetStatusPos(get_par_value);
+						SendFailedGetPar(get_par_drv);
+						SendFailedGetMovPar(get_par_drv);
+						SendFailedGetStatusPos(get_par_drv);
 					}	
 				}
 				
@@ -685,65 +713,63 @@ int main(int argc, char *argv[])
 				
 				int num_arg_homing = 0;
 				
-				int* homing_val = NULL;
+				int* homing_drv_array = NULL;
 				
 				char* homing_mult_punt = NULL; 
 				
 				int i = 0;
 				
-				char* buffer_homing_value;
+				char* homing_mult_contents;
 				
-				int homing_value = 0;
 				
 				if (reg_matches (buffer, "^[Hh][Oo][Mm][Ii][Nn][Gg]_[Mm][Uu][Ll][Tt]([ \t]+[0-9]{1,2}){1,14}[ \t]*$"))
 				{
-					homing_value = FindIntegerValue(buffer);
-					buffer_homing_value = buffer;
+					homing_mult_contents = buffer;
 				}
+				//if the command was sent via TCP/IP
 				else
 				{
-					homing_value = FindIntegerValue(command_received_by_user.command_sent_by_user);
-					buffer_homing_value = command_received_by_user.command_sent_by_user;
+					homing_mult_contents = command_received_by_user.command_sent_by_user;
 				}				
 			  
 				if (STATE_CONNECT == 1)
 				{
 					
-					num_arg_homing = FindNumArg(buffer_homing_value);
+					num_arg_homing = FindNumArg(homing_mult_contents);
 					
-					homing_val = (int*)malloc(num_arg_homing*sizeof(int));
+					homing_drv_array = (int*)malloc(num_arg_homing*sizeof(int));
 					
-					homing_mult_punt = buffer_homing_value;
+					homing_mult_punt = homing_mult_contents;
 					
 					for (i=0; i<num_arg_homing; i++)
 					{
 						homing_mult_punt = FindPointer(homing_mult_punt);
-						homing_val[i] = atoi(homing_mult_punt);
+						homing_drv_array[i] = atoi(homing_mult_punt);
 						
-						Homing(ctx, homing_val[i]);
-						GetMovePar(ctx, homing_val[i]);
+						Homing(ctx, homing_drv_array[i]);
+						GetMovePar(ctx, homing_drv_array[i]);
 					}
 					
-					free(homing_val);
+					free(homing_drv_array);
 
 				}
 				else
 				{
 					
-					num_arg_homing = FindNumArg(buffer_homing_value);
+					num_arg_homing = FindNumArg(homing_mult_contents);
 					
-					homing_val = (int*)malloc(num_arg_homing*sizeof(int));
+					homing_drv_array = (int*)malloc(num_arg_homing*sizeof(int));
 					
-					homing_mult_punt = buffer_homing_value;
+					homing_mult_punt = homing_mult_contents;
 					
 					for (i=0; i<num_arg_homing; i++)
 					{
 						homing_mult_punt = FindPointer(homing_mult_punt);
-						homing_val[i] = atoi(homing_mult_punt);
-						output_module->Output("homing: " + to_string(homing_val[i]) + " Programmer not connected, digit 'connect programmerpath'.\n " + to_string(-1));
+						homing_drv_array[i] = atoi(homing_mult_punt);
+						output_module->Output("homing: " + to_string(homing_drv_array[i]) + " Programmer not connected, digit 'connect programmerpath'.\n " + to_string(-1));
 					}
 					
-					free(homing_val);					
+					free(homing_drv_array);					
 					
 				}
 			}
@@ -756,7 +782,7 @@ int main(int argc, char *argv[])
 				
 				int num_arg_moveto = 0;
 				
-				int* moveto_val = NULL;
+				int* moveto_drv_array = NULL;
 				
 				char* moveto_mult_punt = NULL; 
 				
@@ -776,6 +802,8 @@ int main(int argc, char *argv[])
 					buffer_moveto_value = buffer;
 					buffer_arg = buffer;
 				}
+				
+				//if the command was sent via TCP/IP
 				else
 				{
 					moveto_value = FindIntegerValue(command_received_by_user.command_sent_by_user);
@@ -790,20 +818,20 @@ int main(int argc, char *argv[])
 					
 					num_arg_moveto = FindNumArg(buffer_moveto_value) - 1; //be careful to this hard coded value!
 					
-					moveto_val = (int*)malloc(num_arg_moveto*sizeof(int));
+					moveto_drv_array = (int*)malloc(num_arg_moveto*sizeof(int));
 					
 					moveto_mult_punt = FindPointer(buffer_moveto_value);
 					
 					for (i=0; i<num_arg_moveto; i++)
 					{
 						moveto_mult_punt = FindPointer(moveto_mult_punt);
-						moveto_val[i] = atoi(moveto_mult_punt);
+						moveto_drv_array[i] = atoi(moveto_mult_punt);
 						
-						MoveToMult(ctx, moveto_val[i], buffer_arg);
-						GetMovePar(ctx, moveto_val[i]);
+						MoveTo(ctx, moveto_drv_array[i], moveto_value);
+						GetMovePar(ctx, moveto_drv_array[i]);
 					}
 					
-					free(moveto_val);
+					free(moveto_drv_array);
 
 				}
 				else
@@ -811,18 +839,18 @@ int main(int argc, char *argv[])
 					
 					num_arg_moveto = FindNumArg(buffer_moveto_value) - 1; //be careful to this hard coded value!
 					
-					moveto_val = (int*)malloc(num_arg_moveto*sizeof(int));
+					moveto_drv_array = (int*)malloc(num_arg_moveto*sizeof(int));
 					
 					moveto_mult_punt = FindPointer(buffer_moveto_value);
 					
 					for (i=0; i<num_arg_moveto; i++)
 					{
 						moveto_mult_punt = FindPointer(moveto_mult_punt);
-						moveto_val[i] = atoi(moveto_mult_punt);
-						output_module->Output("get_move_par: " + to_string(moveto_val[i]) + " Programmer not connected, digit 'connect programmerpath'.\n " + to_string(-1));
+						moveto_drv_array[i] = atoi(moveto_mult_punt);
+						output_module->Output("get_move_par: " + to_string(moveto_drv_array[i]) + " Programmer not connected, digit 'connect programmerpath'.\n " + to_string(-1));
 					}
 					
-					free(moveto_val);					
+					free(moveto_drv_array);					
 					
 				}
 			}
@@ -856,6 +884,7 @@ int main(int argc, char *argv[])
 					buffer_setpar_mult_value = buffer;
 					buffer_arg = buffer;
 				}
+				//if the command was sent via TCP/IP
 				else
 				{
 					buffer_setpar_mult_value = command_received_by_user.command_sent_by_user;
@@ -981,6 +1010,699 @@ int main(int argc, char *argv[])
 
 			}				
 			
+			//set_status_state drvnum status_state
+			//This command set to status_state the variable status_state of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Ss][Tt][Aa][Tt][Uu][Ss]_[Ss][Tt][Aa][Tt][Ee][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Ss][Ee][Tt]_[Ss][Tt][Aa][Tt][Uu][Ss]_[Ss][Tt][Aa][Tt][Ee][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$"))
+			{
+				char* buffer_status_state;
+				
+				uint16_t status_state_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Ss][Tt][Aa][Tt][Uu][Ss]_[Ss][Tt][Aa][Tt][Ee][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$"))
+				{
+					status_state_drv = FindIntegerValue(buffer);
+					buffer_status_state = buffer;
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					status_state_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+					buffer_status_state = command_received_by_user.command_sent_by_user;
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					SetStatusStateVariable(ctx, status_state_drv, (uint16_t)FindIntegerValue(FindPointer(buffer_status_state)));
+				}
+				else
+				{
+					output_module->Output("get_status_state: " + to_string(status_state_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}
+
+			//get_status_state drvnum
+			//This command get the variable status_state of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Ss][Tt][Aa][Tt][Uu][Ss]_[Ss][Tt][Aa][Tt][Ee][ \t]+[0-9]{1,2}[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Gg][Ee][Tt]_[Ss][Tt][Aa][Tt][Uu][Ss]_[Ss][Tt][Aa][Tt][Ee][ \t]+[0-9]{1,2}[ \t]*$"))
+			{
+				
+				uint16_t status_state_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Ss][Tt][Aa][Tt][Uu][Ss]_[Ss][Tt][Aa][Tt][Ee][ \t]+[0-9]{1,2}[ \t]*$"))
+				{
+					status_state_drv = FindIntegerValue(buffer);
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					status_state_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					GetStatusStateVariable(ctx, status_state_drv);
+				}
+				else
+				{
+					output_module->Output("get_status_state: " + to_string(status_state_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}		
+			
+			//set_request_state drvnum status_state
+			//This command set to request_state the variable request_state of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Rr][Ee][Qq][Uu][Ee][Ss][Tt]_[Ss][Tt][Aa][Tt][Ee][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Ss][Ee][Tt]_[Rr][Ee][Qq][Uu][Ee][Ss][Tt]_[Ss][Tt][Aa][Tt][Ee][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$"))
+			{
+				char* buffer_request_state;
+				
+				uint16_t request_state_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Rr][Ee][Qq][Uu][Ee][Ss][Tt]_[Ss][Tt][Aa][Tt][Ee][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$"))
+				{
+					request_state_drv = FindIntegerValue(buffer);
+					buffer_request_state = buffer;
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					request_state_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+					buffer_request_state = command_received_by_user.command_sent_by_user;
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					SetRequestStateVariable(ctx, request_state_drv, (uint16_t)FindIntegerValue(FindPointer(buffer_request_state)));
+				}
+				else
+				{
+					output_module->Output("get_request_state: " + to_string(request_state_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}
+
+			//get_request_state drvnum
+			//This command get the variable request_state of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Rr][Ee][Qq][Uu][Ee][Ss][Tt]_[Ss][Tt][Aa][Tt][Ee][ \t]+[0-9]{1,2}[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Gg][Ee][Tt]_[Rr][Ee][Qq][Uu][Ee][Ss][Tt]_[Ss][Tt][Aa][Tt][Ee][ \t]+[0-9]{1,2}[ \t]*$"))
+			{
+				
+				uint16_t request_state_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Rr][Ee][Qq][Uu][Ee][Ss][Tt]_[Ss][Tt][Aa][Tt][Ee][ \t]+[0-9]{1,2}[ \t]*$"))
+				{
+					request_state_drv = FindIntegerValue(buffer);
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					request_state_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					GetRequestStateVariable(ctx, request_state_drv);
+				}
+				else
+				{
+					output_module->Output("get_request_state: " + to_string(request_state_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}					
+	
+			//save_eprom drvnum
+			//This command begins the save_eprom procedure of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Ss][Aa][Vv][Ee]_[Ee][Pp][Rr][Oo][Mm][ \t]+[0-9]{1,2}[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Ss][Aa][Vv][Ee]_[Ee][Pp][Rr][Oo][Mm][ \t]+[0-9]{1,2}[ \t]*$"))
+			{
+				
+				uint16_t save_eprom_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Ss][Aa][Vv][Ee]_[Ee][Pp][Rr][Oo][Mm][ \t]+[0-9]{1,2}[ \t]*$"))
+				{
+					save_eprom_drv = FindIntegerValue(buffer);
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					save_eprom_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					GetRequestStateVariable(ctx, save_eprom_drv);
+				}
+				else
+				{
+					output_module->Output("save_eprom: " + to_string(save_eprom_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}		
+			
+			//check_fault drvnum
+			//This get the value of the Fault register of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Cc][Hh][Ee][Cc][Kk]_[Ff][Aa][Uu][Ll][Tt][ \t]+[0-9]{1,2}[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Cc][Hh][Ee][Cc][Kk]_[Ff][Aa][Uu][Ll][Tt][ \t]+[0-9]{1,2}[ \t]*$"))
+			{
+				
+				uint16_t check_fault_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Cc][Hh][Ee][Cc][Kk]_[Ff][Aa][Uu][Ll][Tt][ \t]+[0-9]{1,2}[ \t]*$"))
+				{
+					check_fault_drv = FindIntegerValue(buffer);
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					check_fault_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					CheckFault(ctx, check_fault_drv);
+				}
+				else
+				{
+					output_module->Output("check_fault: " + to_string(check_fault_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}					
+						
+			//set_home_done drvnum home_done
+			//This command set to home_done the variable home_done of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Hh][Oo][Mm][Ee]_[Dd][Oo][Nn][Ee][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Ss][Ee][Tt]_[Hh][Oo][Mm][Ee]_[Dd][Oo][Nn][Ee][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$"))
+			{
+				char* buffer_home_done;
+				
+				uint16_t home_done_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Hh][Oo][Mm][Ee]_[Dd][Oo][Nn][Ee][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$"))
+				{
+					home_done_drv = FindIntegerValue(buffer);
+					buffer_home_done = buffer;
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					home_done_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+					buffer_home_done = command_received_by_user.command_sent_by_user;
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					SetHomeDoneVariable(ctx, home_done_drv, (uint16_t)FindIntegerValue(FindPointer(buffer_home_done)));
+				}
+				else
+				{
+					output_module->Output("home_done: " + to_string(home_done_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}
+
+			//get_home_done drvnum
+			//This command get the variable home_done of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Hh][Oo][Mm][Ee]_[Dd][Oo][Nn][Ee][ \t]+[0-9]{1,2}[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Gg][Ee][Tt]_[Hh][Oo][Mm][Ee]_[Dd][Oo][Nn][Ee][ \t]+[0-9]{1,2}[ \t]*$"))
+			{
+				
+				uint16_t home_done_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Hh][Oo][Mm][Ee]_[Dd][Oo][Nn][Ee][ \t]+[0-9]{1,2}[ \t]*$"))
+				{
+					home_done_drv = FindIntegerValue(buffer);
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					home_done_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					GetHomeDoneVariable(ctx, home_done_drv);
+				}
+				else
+				{
+					output_module->Output("home_done: " + to_string(home_done_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}						
+			
+			//set_encoder_max drvnum encoder_max
+			//This command set to encoder_max the variable Encoder_Max of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Ee][Nn][Cc][Oo][Dd][Ee][Rr]_[Mm][Aa][Xx][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Ss][Ee][Tt]_[Ee][Nn][Cc][Oo][Dd][Ee][Rr]_[Mm][Aa][Xx][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$"))
+			{
+				char* buffer_encoder_max;
+				
+				uint16_t encoder_max_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Ee][Nn][Cc][Oo][Dd][Ee][Rr]_[Mm][Aa][Xx][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$"))
+				{
+					encoder_max_drv = FindIntegerValue(buffer);
+					buffer_encoder_max = buffer;
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					encoder_max_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+					buffer_encoder_max = command_received_by_user.command_sent_by_user;
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					SetEncoderMaxVariable(ctx, encoder_max_drv, (uint16_t)FindIntegerValue(FindPointer(buffer_encoder_max)));
+				}
+				else
+				{
+					output_module->Output("encoder_max: " + to_string(encoder_max_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}
+
+			//get_encoder_max drvnum
+			//This command get the variable Encoder_Max of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Ee][Nn][Cc][Oo][Dd][Ee][Rr]_[Mm][Aa][Xx][ \t]+[0-9]{1,2}[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Gg][Ee][Tt]_[Ee][Nn][Cc][Oo][Dd][Ee][Rr]_[Mm][Aa][Xx][ \t]+[0-9]{1,2}[ \t]*$"))
+			{
+				
+				uint16_t encoder_max_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Ee][Nn][Cc][Oo][Dd][Ee][Rr]_[Mm][Aa][Xx][ \t]+[0-9]{1,2}[ \t]*$"))
+				{
+					encoder_max_drv = FindIntegerValue(buffer);
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					encoder_max_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					GetEncoderMaxVariable(ctx, encoder_max_drv);
+				}
+				else
+				{
+					output_module->Output("encoder_max: " + to_string(encoder_max_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}													
+						
+			//set_encoder_min drvnum encoder_min
+			//This command set to encoder_min the variable encoder_min of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Ee][Nn][Cc][Oo][Dd][Ee][Rr]_[Mm][Ii][Nn][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Ss][Ee][Tt]_[Ee][Nn][Cc][Oo][Dd][Ee][Rr]_[Mm][Ii][Nn][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$"))
+			{
+				char* buffer_encoder_min;
+				
+				uint16_t encoder_min_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Ee][Nn][Cc][Oo][Dd][Ee][Rr]_[Mm][Ii][Nn][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$"))
+				{
+					encoder_min_drv = FindIntegerValue(buffer);
+					buffer_encoder_min = buffer;
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					encoder_min_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+					buffer_encoder_min = command_received_by_user.command_sent_by_user;
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					SetEncoderMinVariable(ctx, encoder_min_drv, (uint16_t)FindIntegerValue(FindPointer(buffer_encoder_min)));
+				}
+				else
+				{
+					output_module->Output("encoder_min: " + to_string(encoder_min_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}
+
+			//get_encoder_min drvnum
+			//This command get the variable Encoder_Min of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Ee][Nn][Cc][Oo][Dd][Ee][Rr]_[Mm][Ii][Nn][ \t]+[0-9]{1,2}[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Gg][Ee][Tt]_[Ee][Nn][Cc][Oo][Dd][Ee][Rr]_[Mm][Ii][Nn][ \t]+[0-9]{1,2}[ \t]*$"))
+			{
+				
+				uint16_t encoder_min_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Ee][Nn][Cc][Oo][Dd][Ee][Rr]_[Mm][Ii][Nn][ \t]+[0-9]{1,2}[ \t]*$"))
+				{
+					encoder_min_drv = FindIntegerValue(buffer);
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					encoder_min_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					GetEncoderMinVariable(ctx, encoder_min_drv);
+				}
+				else
+				{
+					output_module->Output("encoder_min: " + to_string(encoder_min_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}								
+
+			//set_delta_analog_pos drvnum delta_analog_pos
+			//This command set to delta_analog_pos the variable Delta_Analog_Pos of the driver indicated by drvnum.
+			//delta_analog_pos MUST be positive
+			else if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Dd][Ee][Ll][Tt][Aa]_[Aa][Nn][Aa][Ll][Oo][Gg]_[Pp][Oo][Ss][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Ss][Ee][Tt]_[Dd][Ee][Ll][Tt][Aa]_[Aa][Nn][Aa][Ll][Oo][Gg]_[Pp][Oo][Ss][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$"))
+			{
+				char* buffer_delta_analog_pos;
+				
+				uint16_t delta_analog_pos_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Dd][Ee][Ll][Tt][Aa]_[Aa][Nn][Aa][Ll][Oo][Gg]_[Pp][Oo][Ss][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$"))
+				{
+					delta_analog_pos_drv = FindIntegerValue(buffer);
+					buffer_delta_analog_pos = buffer;
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					delta_analog_pos_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+					buffer_delta_analog_pos = command_received_by_user.command_sent_by_user;
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					SetDeltaAnalogPosVariable(ctx, delta_analog_pos_drv, (uint16_t)FindIntegerValue(FindPointer(buffer_delta_analog_pos)));
+				}
+				else
+				{
+					output_module->Output("delta_analog_pos: " + to_string(delta_analog_pos_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}
+
+			//get_delta_analog_pos drvnum
+			//This command get the variable Delta_Analog_Pos of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Dd][Ee][Ll][Tt][Aa]_[Aa][Nn][Aa][Ll][Oo][Gg]_[Pp][Oo][Ss][ \t]+[0-9]{1,2}[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Gg][Ee][Tt]_[Dd][Ee][Ll][Tt][Aa]_[Aa][Nn][Aa][Ll][Oo][Gg]_[Pp][Oo][Ss][ \t]+[0-9]{1,2}[ \t]*$"))
+			{
+				
+				uint16_t delta_analog_pos_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Dd][Ee][Ll][Tt][Aa]_[Aa][Nn][Aa][Ll][Oo][Gg]_[Pp][Oo][Ss][ \t]+[0-9]{1,2}[ \t]*$"))
+				{
+					delta_analog_pos_drv = FindIntegerValue(buffer);
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					delta_analog_pos_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					GetDeltaAnalogPosVariable(ctx, delta_analog_pos_drv);
+				}
+				else
+				{
+					output_module->Output("delta_analog_pos: " + to_string(delta_analog_pos_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}				
+			
+			//set_phase_current_user drvnum phase_current_user
+			//This command set to phase_current_user the variable PhaseCurr_User of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Pp][Hh][Aa][Ss][Ee]_[Cc][Uu][Rr][Rr][Ee][Nn][Tt]_[Uu][Ss][Ee][Rr][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Ss][Ee][Tt]_[Pp][Hh][Aa][Ss][Ee]_[Cc][Uu][Rr][Rr][Ee][Nn][Tt]_[Uu][Ss][Ee][Rr][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$"))
+			{
+				char* buffer_phase_current_user;
+				
+				uint16_t phase_current_user_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Pp][Hh][Aa][Ss][Ee]_[Cc][Uu][Rr][Rr][Ee][Nn][Tt]_[Uu][Ss][Ee][Rr][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$"))
+				{
+					phase_current_user_drv = FindIntegerValue(buffer);
+					buffer_phase_current_user = buffer;
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					phase_current_user_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+					buffer_phase_current_user = command_received_by_user.command_sent_by_user;
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					SetPhaseCurrentUserVariable(ctx, phase_current_user_drv, (uint16_t)FindIntegerValue(FindPointer(buffer_phase_current_user)));
+				}
+				else
+				{
+					output_module->Output("phase_current_user: " + to_string(phase_current_user_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}
+
+			//get_phase_current_user drvnum
+			//This command get the variable PhaseCurr_User of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Pp][Hh][Aa][Ss][Ee]_[Cc][Uu][Rr][Rr][Ee][Nn][Tt]_[Uu][Ss][Ee][Rr][ \t]+[0-9]{1,2}[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Gg][Ee][Tt]_[Pp][Hh][Aa][Ss][Ee]_[Cc][Uu][Rr][Rr][Ee][Nn][Tt]_[Uu][Ss][Ee][Rr][ \t]+[0-9]{1,2}[ \t]*$"))
+			{
+				
+				uint16_t phase_current_user_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Pp][Hh][Aa][Ss][Ee]_[Cc][Uu][Rr][Rr][Ee][Nn][Tt]_[Uu][Ss][Ee][Rr][ \t]+[0-9]{1,2}[ \t]*$"))
+				{
+					phase_current_user_drv = FindIntegerValue(buffer);
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					phase_current_user_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					GetPhaseCurrentUserVariable(ctx, phase_current_user_drv);
+				}
+				else
+				{
+					output_module->Output("phase_current_user: " + to_string(phase_current_user_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}							
+						
+			//set_delay_check_rot drvnum delay_check_rot
+			//This command set to delay_check_rot the variable Delay_CheckRot of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Dd][Ee][Ll][Aa][Yy]_[Cc][Hh][Ee][Cc][Kk]_[Rr][Oo][Tt][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Ss][Ee][Tt]_[Dd][Ee][Ll][Aa][Yy]_[Cc][Hh][Ee][Cc][Kk]_[Rr][Oo][Tt][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$"))
+			{
+				char* buffer_delay_check_rot;
+				
+				uint16_t delay_check_rot_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Dd][Ee][Ll][Aa][Yy]_[Cc][Hh][Ee][Cc][Kk]_[Rr][Oo][Tt][ \t]+[0-9]{1,2}([ \t]+[0-9]{1,10})[ \t]*$"))
+				{
+					delay_check_rot_drv = FindIntegerValue(buffer);
+					buffer_delay_check_rot = buffer;
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					delay_check_rot_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+					buffer_delay_check_rot = command_received_by_user.command_sent_by_user;
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					SetDelayCheckRotVariable(ctx, delay_check_rot_drv, (uint16_t)FindIntegerValue(FindPointer(buffer_delay_check_rot)));
+				}
+				else
+				{
+					output_module->Output("delay_check_rot: " + to_string(delay_check_rot_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}
+
+			//get_delay_check_rot drvnum
+			//This command get the variable Delay_CheckRot of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Dd][Ee][Ll][Aa][Yy]_[Cc][Hh][Ee][Cc][Kk]_[Rr][Oo][Tt][ \t]+[0-9]{1,2}[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Gg][Ee][Tt]_[Dd][Ee][Ll][Aa][Yy]_[Cc][Hh][Ee][Cc][Kk]_[Rr][Oo][Tt][ \t]+[0-9]{1,2}[ \t]*$"))
+			{
+				
+				uint16_t delay_check_rot_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Dd][Ee][Ll][Aa][Yy]_[Cc][Hh][Ee][Cc][Kk]_[Rr][Oo][Tt][ \t]+[0-9]{1,2}[ \t]*$"))
+				{
+					delay_check_rot_drv = FindIntegerValue(buffer);
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					delay_check_rot_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					GetDelayCheckRotVariable(ctx, delay_check_rot_drv);
+				}
+				else
+				{
+					output_module->Output("delay_check_rot: " + to_string(delay_check_rot_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}
+			
+			//set_delta_analog_neg drvnum delta_analog_neg
+			//This command set to delta_analog_neg the variable Delta_Analog_Neg of the driver indicated by drvnum.
+			//delta_analog_neg MUST be negative.
+			else if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Dd][Ee][Ll][Tt][Aa]_[Aa][Nn][Aa][Ll][Oo][Gg]_[Nn][Ee][Gg][ \t]+[0-9]{1,2}([ \t]+-{0,1}[0-9]{1,10})[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Ss][Ee][Tt]_[Dd][Ee][Ll][Tt][Aa]_[Aa][Nn][Aa][Ll][Oo][Gg]_[Nn][Ee][Gg][ \t]+[0-9]{1,2}([ \t]+-{0,1}[0-9]{1,10})[ \t]*$"))
+			{
+				char* buffer_delta_analog_neg;
+				
+				uint16_t delta_analog_neg_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Dd][Ee][Ll][Tt][Aa]_[Aa][Nn][Aa][Ll][Oo][Gg]_[Nn][Ee][Gg][ \t]+[0-9]{1,2}([ \t]+-{0,1}[0-9]{1,10})[ \t]*$"))
+				{
+					delta_analog_neg_drv = FindIntegerValue(buffer);
+					buffer_delta_analog_neg = buffer;
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					delta_analog_neg_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+					buffer_delta_analog_neg = command_received_by_user.command_sent_by_user;
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					SetDeltaAnalogNegVariable(ctx, delta_analog_neg_drv, (int16_t)FindIntegerValue(FindPointer(buffer_delta_analog_neg)));
+				}
+				else
+				{
+					output_module->Output("delta_analog_neg: " + to_string(delta_analog_neg_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}
+
+			//get_delta_analog_neg drvnum
+			//This command get the variable Delta_Analog_Neg of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Dd][Ee][Ll][Tt][Aa]_[Aa][Nn][Aa][Ll][Oo][Gg]_[Nn][Ee][Gg][ \t]+[0-9]{1,2}[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Gg][Ee][Tt]_[Dd][Ee][Ll][Tt][Aa]_[Aa][Nn][Aa][Ll][Oo][Gg]_[Nn][Ee][Gg][ \t]+[0-9]{1,2}[ \t]*$"))
+			{
+				
+				uint16_t delta_analog_neg_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Dd][Ee][Ll][Tt][Aa]_[Aa][Nn][Aa][Ll][Oo][Gg]_[Nn][Ee][Gg][ \t]+[0-9]{1,2}[ \t]*$"))
+				{
+					delta_analog_neg_drv = FindIntegerValue(buffer);
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					delta_analog_neg_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					GetDeltaAnalogNegVariable(ctx, delta_analog_neg_drv);
+				}
+				else
+				{
+					output_module->Output("delta_analog_neg: " + to_string(delta_analog_neg_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}					
+			
+			//set_max_target_position drvnum max_target_position
+			//This command set to max_target_position the variable Max_TargetPos of the driver indicated by drvnum.
+			//max_target_position could be negative or positive
+			else if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Mm][Aa][Xx]_[Tt][Aa][Rr][Gg][Ee][Tt]_[Pp][Oo][Ss][Ii][Tt][Ii][Oo][Nn][ \t]+[0-9]{1,2}([ \t]+-{0,1}[0-9]{1,10})[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Ss][Ee][Tt]_[Mm][Aa][Xx]_[Tt][Aa][Rr][Gg][Ee][Tt]_[Pp][Oo][Ss][Ii][Tt][Ii][Oo][Nn][ \t]+[0-9]{1,2}([ \t]+-{0,1}[0-9]{1,10})[ \t]*$"))
+			{
+				char* buffer_max_target_position;
+				
+				uint16_t max_target_position_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Ss][Ee][Tt]_[Mm][Aa][Xx]_[Tt][Aa][Rr][Gg][Ee][Tt]_[Pp][Oo][Ss][Ii][Tt][Ii][Oo][Nn][ \t]+[0-9]{1,2}([ \t]+-{0,1}[0-9]{1,10})[ \t]*$"))
+				{
+					max_target_position_drv = FindIntegerValue(buffer);
+					buffer_max_target_position = buffer;
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					max_target_position_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+					buffer_max_target_position = command_received_by_user.command_sent_by_user;
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					SetMaxTargetPositionVariable(ctx, max_target_position_drv, (int)FindIntegerValue(FindPointer(buffer_max_target_position)));
+				}
+				else
+				{
+					output_module->Output("max_target_position: " + to_string(max_target_position_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}
+
+			//get_max_target_position drvnum
+			//This command get the variable Max_TargetPos of the driver indicated by drvnum.
+			else if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Mm][Aa][Xx]_[Tt][Aa][Rr][Gg][Ee][Tt]_[Pp][Oo][Ss][Ii][Tt][Ii][Oo][Nn][ \t]+[0-9]{1,2}[ \t]*$") || 
+					 reg_matches (command_received_by_user.command_sent_by_user, "^[Gg][Ee][Tt]_[Mm][Aa][Xx]_[Tt][Aa][Rr][Gg][Ee][Tt]_[Pp][Oo][Ss][Ii][Tt][Ii][Oo][Nn][ \t]+[0-9]{1,2}[ \t]*$"))
+			{
+				
+				uint16_t max_target_position_drv = 0;
+				
+				//if the command was sent via stdin
+				if (reg_matches (buffer, "^[Gg][Ee][Tt]_[Mm][Aa][Xx]_[Tt][Aa][Rr][Gg][Ee][Tt]_[Pp][Oo][Ss][Ii][Tt][Ii][Oo][Nn][ \t]+[0-9]{1,2}[ \t]*$"))
+				{
+					max_target_position_drv = FindIntegerValue(buffer);
+				}
+				//if the command was sent via TCP/IP
+				else
+				{
+					max_target_position_drv = FindIntegerValue(command_received_by_user.command_sent_by_user);
+				}				
+			  
+				if (STATE_CONNECT == 1)
+				{
+					GetMaxTargetPositionVariable(ctx, max_target_position_drv);
+				}
+				else
+				{
+					output_module->Output("max_target_position: " + to_string(max_target_position_drv) + " " + to_string(-1) + '\n');
+					output_module->Output("Programmer not connected, digit 'connect programmerpath'.\n");
+				}
+			}																	
+						
 			//Unrecognized comand.
 			else
 			{
@@ -988,11 +1710,13 @@ int main(int argc, char *argv[])
 				if (main_application_setup->input_mode != ONLYTCP) {
 					fflush(stdout);
 				}
+				//if the command was sent via stdin
 				if (buffer[0] != 0)
 				{
 					string tmp(buffer);
 					output_module->Output(tmp + "\n");
 				}
+				//if the command was sent via TCP/IP
 				else
 				{
 					string tmp(command_received_by_user.command_sent_by_user);
