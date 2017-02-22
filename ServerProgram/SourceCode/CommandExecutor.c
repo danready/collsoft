@@ -3437,12 +3437,12 @@ void CheckDriverStatus(modbus_t* ctx, int check_driver_status_drv)
 		if (position_status == 0)
 		{
 			output_module->Output("check_driver_status: " + to_string(check_driver_status_drv) + " " + to_string(POSITION_MATCH) + '\n');
-			output_module->Output("Exp: driver " + to_string(check_driver_status_drv) + " has failed to load data from eeprom failed\n");
+			output_module->Output("Exp: driver " + to_string(check_driver_status_drv) + " position match\n");
 		}
 		else if (position_status == -1)
 		{
 			output_module->Output("check_driver_status: " + to_string(check_driver_status_drv) + " " + to_string(POSITION_MISMATCH) + '\n');
-			output_module->Output("Exp: driver " + to_string(check_driver_status_drv) + " has failed to load data from eeprom failed\n");
+			output_module->Output("Exp: driver " + to_string(check_driver_status_drv) + " position mismatch\n");
 		}
 		else
 		{
