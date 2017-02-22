@@ -1,6 +1,10 @@
 # collsoft v.0.0
 See CollSoftProgrammersGuide.pdf for detailed information.
 
+22/02/2017
+-check_driver_status drvnum:
+this command sends to the client the status of the driver reading the status_state variable.
+
 20/02/2017
 
 Rispetto alla versione base del server contenuta nel repository collsoft,
